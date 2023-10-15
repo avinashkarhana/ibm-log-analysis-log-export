@@ -33,12 +33,14 @@ try:
     for host in hosts:
         for app_name in apps:
             logs_folder_name = "Logs_from_timestamp_" + str(from_timestamp) + "_to_timestamp_" + str(to_timestamp)
-            file_name_prefix = ""
-            # Create an empty log file
-            if app_name:
-                file_name_prefix += app_name + "_"
+            file_name_prefix = "All_source"
+            
             if host:
-                file_name_prefix += host
+                if file_name_prefix == "All_source":
+                    file_name_prefix = ""
+                file_name_prefix = host
+            if app_name:
+                file_name_prefix += "_" + app_name
 
             log_file_name = f"{logs_folder_name}/{file_name_prefix}-log.txt"
             print("> Starting Log Backup in " + log_file_name)
