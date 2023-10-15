@@ -1,11 +1,13 @@
 # IBM Log Analysis Log Export
+
 A Python based Log Export Tool for IBM Log Analysis.
 
 This tool uses IBM Log Analysis API to export logs.
 
 This tool tries to get logs in a format as close to as they are shown in IBM Log Analysis UI
 
-# Usage
+## Usage
+
 First make required changes in the `config.py` file.
 
     # In config.py file
@@ -35,16 +37,15 @@ First make required changes in the `config.py` file.
     # Construct the IBM Log Analysis API endpoint
     endpoint = f"https://api.{ibm_log_analysis_region}.logging.cloud.ibm.com"
 
-Then run the `LogDNAExportLogs.py` script
+Then run the `IBMLogAnalysisExportLogs.py` script
 
 Example:
 
-    python3 LogDNAExportLogs.py
-
+    python3 IBMLogAnalysisExportLogs.py
 
 This will generate a folder in current path with all logs requested.
 
+## Contribution Guide
 
-# Contribution Guide
 - Make sure you are not committing code with any sensitive information like service_id.
 - Make sure your config.py has variables with preferably empty, or if not possible generic value.
