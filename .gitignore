@@ -2,3 +2,4 @@
 *Logs_from_timestamp_*_to_timestamp_*
 .DS_Store
 __pycache__
+Logs/*

@@ -2,6 +2,7 @@ import requests
 import json
 import sys
 from datetime import datetime
+from pytz import timezone
 import os
 from time import sleep
 
@@ -32,7 +33,8 @@ try:
 
     for host in hosts:
         for app_name in apps:
-            logs_folder_name = "Logs_from_timestamp_" + str(from_timestamp) + "_to_timestamp_" + str(to_timestamp)
+            os.makedirs("Logs", exist_ok=True)
+            logs_folder_name = "Logs/Logs_from_timestamp_" + str(from_timestamp) + "_to_timestamp_" + str(to_timestamp)
             file_name_prefix = "All_source"
             
             if host:
@@ -88,6 +90,29 @@ try:
                     break
             print("# Done taking Log Backup in " + log_file_name)
             sleep(1)
+    
+    # Convert timestamps to datetime objects
+    from_datetime = datetime.fromtimestamp(from_timestamp)
+    to_datetime = datetime.fromtimestamp(to_timestamp)
+
+    # Convert datetime objects to UTC time
+    from_datetime_utc = from_datetime.astimezone(timezone('UTC'))
+    to_datetime_utc = to_datetime.astimezone(timezone('UTC'))
+
+    # Convert datetime objects to UTC string
+    parsed_from_timestamp_to_utc_string = from_datetime_utc.strftime('%Y-%m-%d %H:%M:%S %Z')
+    parsed_to_timestamp_to_utc_string = to_datetime_utc.strftime('%Y-%m-%d %H:%M:%S %Z')
+
+    # Create the readme.txt with formatted variables
+    readmeTxt = f"""
+These logs are from the following time frame:
+    - From unix timestamp: {from_timestamp} ({parsed_from_timestamp_to_utc_string})
+    - To unix timestamp: {to_timestamp} ({parsed_to_timestamp_to_utc_string})
+    """
+    print("Writing Readme.txt")
+    with open(f"${logs_folder_name}/README.txt", 'w') as log_file:
+        log_file.write(readmeTxt)
+        
 
 except Exception as e:
     print(f"An error occurred: {str(e)}")

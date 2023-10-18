@@ -8,7 +8,11 @@ This tool tries to get logs in a format as close as it can to what is shown in t
 
 ## Usage
 
-First, make the required changes in the `config.py` file.
+Install dependencies from requirements.txt
+
+    pip install -r requirements.txt
+
+Then, make the required changes in the `config.py` file.
 
     # In config.py file
 
