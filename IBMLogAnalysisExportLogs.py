@@ -110,7 +110,7 @@ These logs are from the following time frame:
     - To unix timestamp: {to_timestamp} ({parsed_to_timestamp_to_utc_string})
     """
     print("Writing Readme.txt")
-    with open(f"${logs_folder_name}/README.txt", 'w') as log_file:
+    with open(f"{logs_folder_name}/README.txt", 'w') as log_file:
         log_file.write(readmeTxt)
         
 
