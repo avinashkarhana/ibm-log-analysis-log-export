@@ -31,6 +31,8 @@ try:
     if len(apps) == 0:
         apps.append(None)
 
+    log_item_dict = {}
+
     for host in hosts:
         for app_name in apps:
             os.makedirs("Logs", exist_ok=True)
@@ -44,11 +46,14 @@ try:
             if app_name:
                 file_name_prefix += "_" + app_name
 
-            log_file_name = f"{logs_folder_name}/{file_name_prefix}-log.txt"
-            print("> Starting Log Backup in " + log_file_name)
+            log_file_name = f"{file_name_prefix}-log.txt"
+            log_file_path = f"{logs_folder_name}/{log_file_name}"
+            print("> Starting Log Backup in " + log_file_path)
             os.makedirs(logs_folder_name, exist_ok=True)
-            with open(log_file_name, 'w') as log_file:
+            with open(log_file_path, 'w') as log_file:
                 pass
+            
+            log_item_dict[log_file_name] = "(BLANK)"
 
             while True:
                 # Make the API request with parameters
@@ -73,8 +78,10 @@ try:
                         line_values = list(map(lambda item: str(datetime.utcfromtimestamp(int(item.get('_ts'))/1000)) + " " + str(item.get('pod')) + " " + str(item.get('_app')) + " " + str(item.get('_line')), line_data))
                         new_line_values = line_values[::-1]
                         # Append the "_line" data to the dynamic log file
-                        with open(log_file_name, 'a') as log_file:
+                        with open(log_file_path, 'a') as log_file:
                             for item in new_line_values:
+                                if len(item) > 1:
+                                    log_item_dict[log_file_name] = ""
                                 item = item.replace("\/", "/")
                                 log_file.write(item + '\n')
 
@@ -88,7 +95,7 @@ try:
                 else:
                     raise ValueError("Failed to fetch data from the API.\nStatus code: "+ str(response.status_code) + "\nResponse: " + str(response.text))
                     break
-            print("# Done taking Log Backup in " + log_file_name)
+            print("# Done taking Log Backup in " + log_file_path)
             sleep(1)
     
     # Convert timestamps to datetime objects
@@ -104,7 +111,12 @@ try:
     parsed_to_timestamp_to_utc_string = to_datetime_utc.strftime('%Y-%m-%d %H:%M:%S %Z')
 
     # Create the readme.txt with formatted variables
-    readmeTxt = f"""
+    readmeTxt = "Logs from following:\n"
+
+    for item in log_item_dict:
+        readmeTxt += f"    - {str(item)} {str(log_item_dict[item])}\n"
+
+    readmeTxt += f"""
 These logs are from the following time frame:
     - From unix timestamp: {from_timestamp} ({parsed_from_timestamp_to_utc_string})
     - To unix timestamp: {to_timestamp} ({parsed_to_timestamp_to_utc_string})
