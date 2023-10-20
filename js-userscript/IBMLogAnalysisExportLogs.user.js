@@ -220,10 +220,26 @@
                             if (lineData.length > 0) {
                                 // Process and append the log data to the Blob
                                 const textToAppend = lineData.map(item => {
+                                    let line = "";
                                     if (item._ts) {
-                                        return `${new Date(item._ts).toISOString()} ${item.pod} ${item._app} ${item._line}`;
+                                        line += `${new Date(item._ts).toISOString()}`;
                                     }
-                                    return '';
+                                    if (item._host) {
+                                        line += ` ${item._host}`;
+                                    }
+                                    if (item._ip) {
+                                        line += ` ${item._ip}`;
+                                    }
+                                    if (item.pod) {
+                                        line += ` ${item.pod}`;
+                                    }
+                                    if (item._app) {
+                                        line += ` ${item._app}`;
+                                    }
+                                    if (item._line) {
+                                        line += ` ${item._line}`;
+                                    }
+                                    return line;
                                 }).join('\n');
 
                                 // Append the text to the logBlob
@@ -545,18 +561,6 @@
 
         // Add Event Listener to Export Log Button
         exportLogButton.addEventListener('click', async () => {
-            // Get ibmLogAnalysisRegion
-            getIBMLogAnalysisRegion();
-
-            // Get Time Frame
-            getTimeFrame();
-
-            // Get selected hosts
-            await getSelectedHosts();
-
-            // Get selected apps
-            await getSelectedApps();
-
             // Export Logs
             exportLogs();
         });
