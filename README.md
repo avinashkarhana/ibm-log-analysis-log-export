@@ -4,7 +4,7 @@ This project contains two tools to export logs from IBM Log Analysis.
 
 1. [IBMLogAnalysisExportLogs.py](https://github.com/avinashkarhana/ibm-log-analysis-log-export/tree/main/python-based) - A Python-based Log Export Tool for IBM Log Analysis.
 
-2. [IBMLogAnalysisExportLogs.user.js](https://github.com/avinashkarhana/ibm-log-analysis-log-export/tree/main/js-based) - A JavaScript-based Browser embedded Log Export Tool for IBM Log Analysis.
+2. [IBMLogAnalysisExportLogs.user.js](https://github.com/avinashkarhana/ibm-log-analysis-log-export/tree/main/js-userscript) - A JavaScript-based Browser embedded Log Export Tool for IBM Log Analysis.
 
 ## Recommendation
 
