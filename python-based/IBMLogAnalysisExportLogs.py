@@ -75,7 +75,30 @@ try:
                     # Extract the "_line" property from the JSON data
                     line_data = data.get('lines', [])
                     if line_data:
-                        line_values = list(map(lambda item: str(datetime.utcfromtimestamp(int(item.get('_ts'))/1000)) + " " + (str(item.get('pod')) if item.get('pod') != None else str(item.get('_host')) + " " + str(item.get('_ip')) )+ " " + str(item.get('_app')) + " " + str(item.get('_line')), line_data))
+                        line_values = []
+                        for item in line_data:
+                            line = ""
+                            timestamp = str(datetime.utcfromtimestamp(int(item.get('_ts'))/1000))
+                            line += timestamp + " "
+                            if item.get("_host"):
+                                line += f' {str(item.get("_host"))}'
+                            if item.get("_ip"):
+                                line += f' {str(item.get("_ip"))}'
+                            if item.get("pod"):
+                                line += f' {str(item.get("pod"))}'
+                            if item.get("_app"):
+                                line += f' {str(item.get("_app"))}'
+                            if item.get("_line"):
+                                if item.get("_logtype") == "json": 
+                                    try:
+                                        line += f' ${json.loads(item.get("_line")).get("message")}'
+                                    except:
+                                        line += f' ${item.get("_line")}'
+                                else:
+                                    line += f' {item.get("_line")}'
+                            line_values.append(line)
+                            
+                            
                         new_line_values = line_values[::-1]
                         # Append the "_line" data to the dynamic log file
                         with open(log_file_path, 'a') as log_file:

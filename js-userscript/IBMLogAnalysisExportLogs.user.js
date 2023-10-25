@@ -237,7 +237,17 @@
                                         line += ` ${item._app}`;
                                     }
                                     if (item._line) {
-                                        line += ` ${item._line}`;
+                                        if (item._logtype === "json") {
+                                            try {
+                                                line += ` ${JSON.parse(item._line).message}`;
+                                            }
+                                            catch {
+                                                line += ` ${item._line}`;
+                                            }
+                                        }
+                                        else {
+                                            line += ` ${item._line}`;
+                                        }
                                     }
                                     return line;
                                 }).join('\n');
