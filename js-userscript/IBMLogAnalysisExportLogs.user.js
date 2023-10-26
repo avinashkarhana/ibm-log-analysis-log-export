@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Avi's IBM Log Exporter
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  IBM Log Exporter for IBM Cloud Log Analysis Service that allows you to export logs from IBM Cloud Log Analysis Service to your local machine in a zip file. Uses IBM Cloud Log Analysis Service Export API, and hence, requires Service ID to work.
 // @updateURL    https://raw.githubusercontent.com/avinashkarhana/ibm-log-analysis-log-export/main/js-userscript/IBMLogAnalysisExportLogs.user.js
 // @downloadURL  https://raw.githubusercontent.com/avinashkarhana/ibm-log-analysis-log-export/main/js-userscript/IBMLogAnalysisExportLogs.user.js
