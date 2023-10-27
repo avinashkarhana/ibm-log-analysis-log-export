@@ -59,6 +59,38 @@
         endpoint = `https://api.${ibmLogAnalysisRegion}.logging.cloud.ibm.com`;
     }
 
+    function timestampStringToEST(timestampString) {
+        let timestamp = parseInt(timestampString);
+        // Check if the timestamp is in seconds (10 digits) and Convert to milliseconds
+        if (timestampString.length === 10) {
+            timestamp = timestamp * 1000;
+        }
+        const date = new Date(timestamp);
+        const options = {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZoneName: 'short',
+            timeZone: 'America/New_York',
+            hour12: false
+        };
+        const dateString = date.toLocaleString('en-US', options);
+        // Manually format the dateString to the desired format
+        const parts = dateString.split(', ');
+        const [datePart, timePart] = parts;
+        const dateParts = datePart.split("/");
+        const year = dateParts[2];
+        const month = dateParts[0];
+        const day = dateParts[1];
+        const formattedDate = `${year}-${month}-${day}`;
+        const formattedDateString = `${formattedDate} ${timePart}`;
+
+        return formattedDateString;
+    }
+
     // Function to Log Export
     async function exportLogs() {
         try {
@@ -107,12 +139,9 @@
                 toTimestamp = toTimestamp * 1000;
             }
 
-            const fromDatetime = new Date(fromTimestamp);
-            const toDatetime = new Date(toTimestamp);
-
-            // Convert datetime objects to UTC time strings
-            const parsedFromTimestampToUTCString = fromDatetime.toString();
-            const parsedToTimestampToUTCString = toDatetime.toString();
+            // Convert datetime objects to EST time strings
+            const parsedFromTimestampToESTString = timestampStringToEST(`${fromTimestamp}`);
+            const parsedToTimestampToESTString = timestampStringToEST(`${toTimestamp}`);
 
             // Construct the full API URL
             const apiURL = `${endpoint}${apiPath}`;
@@ -128,7 +157,7 @@
 
             // if hosts and apps are empty then ask for confirmation if user wants to export all logs
             if (hosts.length === 0 && apps.length === 0) {
-                const confirmation = confirm(`No specific Source(hosts) or Apps selected. \nAre you sure that you want to export all logs from ${parsedFromTimestampToUTCString} to ${parsedToTimestampToUTCString}. \nPress OK to continue or Cancel to abort.`);
+                const confirmation = confirm(`No specific Source(hosts) or Apps selected. \nAre you sure that you want to export all logs from ${parsedFromTimestampToESTString} to ${parsedToTimestampToESTString}. \nPress OK to continue or Cancel to abort.`);
                 if (!confirmation) {
                     alert('Log Export Aborted by User!\n\nPlease select some hosts or apps and try again.');
                     throw new Error('Log Export Aborted by User!\n\nUser refused to export logs without selecting hosts or apps.');
@@ -193,7 +222,7 @@
                         }
 
                         if (paginationId) {
-                            params.paginationId = paginationId;
+                            params.pagination_id = paginationId;
                         }
 
                         // Ask for Service ID if not provided
@@ -222,7 +251,7 @@
                                 const textToAppend = lineData.map(item => {
                                     let line = "";
                                     if (item._ts) {
-                                        line += `${new Date(item._ts).toISOString()}`;
+                                        line += timestampStringToEST(`${item._ts}`);
                                     }
                                     if (item._host) {
                                         line += ` ${item._host}`;
@@ -257,7 +286,7 @@
                             }
 
                             // Get the paginationId from the response
-                            paginationId = data.paginationId;
+                            paginationId = data.pagination_id;
 
                             // If there's no more paginationId, exit the loop
                             if (!paginationId) {
@@ -288,8 +317,8 @@
             });
 
             readmeTxt += `\nThese logs are from the following time frame:
-    - From unix timestamp: ${fromTimestamp} (${parsedFromTimestampToUTCString})
-    - To unix timestamp: ${toTimestamp} (${parsedToTimestampToUTCString})`;
+    - From unix timestamp: ${fromTimestamp} (${parsedFromTimestampToESTString})
+    - To unix timestamp: ${toTimestamp} (${parsedToTimestampToESTString})`;
 
             // Add the readme.txt blob to the logItemArray
             logItemArray.push({ name: 'README.txt', data: readmeTxt });
@@ -301,6 +330,9 @@
                 let item = logItemArray[i];
                 zip.file(item.name, item.data);
             }
+
+            console.log(logItemArray);
+            updateExportLogNotificationText("Log Export: Zipping Logs")
 
             // Generate the zip file as a Blob
             let zipResp = zip.generateAsync({ type: 'blob' })
@@ -319,7 +351,7 @@
 
                     // make Export Log Notification Success and hide it after 5 seconds
                     changeExportLogNotificationIcon('success');
-                    updateExportLogNotificationText('Log Exported Successfully');
+                    updateExportLogNotificationText('Log Exported Successfully, If not downloaded check Console Logs you can find data there as well');
                     setTimeout(hideExportLogNotification, 5000);
                 });
             console.log(zipResp);
@@ -511,8 +543,8 @@
                 }
                 console.log("Selected Hosts:", hosts);
                 document.body.click();
-                setTimeout(resolve, 200);
-            }, 300);
+                setTimeout(resolve, 100);
+            }, 100);
         });
         return promise;
     }
@@ -530,8 +562,8 @@
                 }
                 console.log("Selected Apps:", apps);
                 document.body.click();
-                setTimeout(resolve, 200);
-            }, 300);
+                setTimeout(resolve, 100);
+            }, 100);
         });
         return promise;
     }
@@ -576,14 +608,20 @@
         });
     }
 
-    // On Body Load
-    window.onload = () => {
-        setTimeout(() => {
+    setTimeout(() => {
             // Add Export Log Button
             addLogExportButton();
 
             // Create Export Log Notification
             createExportLogNotification();
-        }, 5000);
-    }
+    }, 5000);
+    setInterval(() => {
+            if (!document.querySelector("#export-log-button")) {
+                // Add Export Log Button
+                addLogExportButton();
+
+            // Create Export Log Notification
+            createExportLogNotification();
+            }
+    }, 5000);
 })();
