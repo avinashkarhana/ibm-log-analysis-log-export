@@ -2,7 +2,7 @@ import requests
 import json
 import sys
 from datetime import datetime
-from pytz import timezone
+from pytz import timezone, utc
 import os
 from time import sleep
 
@@ -18,6 +18,20 @@ endpoint = f"https://api.{ibm_log_analysis_region}.logging.cloud.ibm.com"
 
 # import config file
 from config import *
+
+def timestamp_str_to_est(epoch_timestamp):
+    '''Converts a timestamp string to EST time'''
+    epoch_timestamp = int(epoch_timestamp)
+    if len(str(epoch_timestamp)) == 13:
+        # Millisecond timestamp (e.g., 1609459200000)
+        epoch_timestamp = epoch_timestamp / 1000
+
+    utc_datetime = datetime.utcfromtimestamp(epoch_timestamp)
+    utc_datetime = utc_datetime.replace(tzinfo=utc)
+    toronto_timezone = timezone('US/Eastern')
+    toronto_datetime = utc_datetime.astimezone(toronto_timezone)
+    toronto_datetime_str = toronto_datetime.strftime('%Y-%m-%d %H:%M:%S %Z')
+    return toronto_datetime_str
 
 try:
     # Construct the full API URL
@@ -78,8 +92,10 @@ try:
                         line_values = []
                         for item in line_data:
                             line = ""
-                            timestamp = str(datetime.utcfromtimestamp(int(item.get('_ts'))/1000))
-                            line += timestamp + " "
+                            timestamp = item.get('_ts')
+                            # timestamp to EST
+                            estDateTimeString = timestamp_str_to_est(timestamp)
+                            line += estDateTimeString + " "
                             if item.get("_host"):
                                 line += f' {str(item.get("_host"))}'
                             if item.get("_ip"):
@@ -98,11 +114,9 @@ try:
                                     line += f' {item.get("_line")}'
                             line_values.append(line)
                             
-                            
-                        new_line_values = line_values[::-1]
                         # Append the "_line" data to the dynamic log file
                         with open(log_file_path, 'a') as log_file:
-                            for item in new_line_values:
+                            for item in line_values:
                                 if len(item) > 1:
                                     log_item_dict[log_file_name] = ""
                                 item = item.replace("\/", "/")
@@ -113,6 +127,15 @@ try:
 
                     # If there's no more pagination_id, exit the loop
                     if not pagination_id:
+                        # open(log_file_path, 'a') as log_file and reverse the file
+                        lines = []
+                        with open(log_file_path, 'r') as log_file:
+                            lines = log_file.readlines()
+                        
+                        lines.reverse()
+                        with open(log_file_path, 'w') as log_file:
+                            log_file.writelines(lines)
+                        
                         break
 
                 else:
@@ -122,17 +145,9 @@ try:
             sleep(1)
     
     # Convert timestamps to datetime objects
-    from_datetime = datetime.fromtimestamp(from_timestamp)
-    to_datetime = datetime.fromtimestamp(to_timestamp)
-
-    # Convert datetime objects to UTC time
-    from_datetime_utc = from_datetime.astimezone(timezone('UTC'))
-    to_datetime_utc = to_datetime.astimezone(timezone('UTC'))
-
-    # Convert datetime objects to UTC string
-    parsed_from_timestamp_to_utc_string = from_datetime_utc.strftime('%Y-%m-%d %H:%M:%S %Z')
-    parsed_to_timestamp_to_utc_string = to_datetime_utc.strftime('%Y-%m-%d %H:%M:%S %Z')
-
+    from_datetime_srt_est = timestamp_str_to_est(from_timestamp)
+    to_datetime_srt_est = timestamp_str_to_est(to_timestamp)
+    
     # Create the readme.txt with formatted variables
     readmeTxt = "Logs from following:\n"
 
@@ -141,8 +156,8 @@ try:
 
     readmeTxt += f"""
 These logs are from the following time frame:
-    - From unix timestamp: {from_timestamp} ({parsed_from_timestamp_to_utc_string})
-    - To unix timestamp: {to_timestamp} ({parsed_to_timestamp_to_utc_string})
+    - From unix timestamp: {from_timestamp} ({from_datetime_srt_est})
+    - To unix timestamp: {to_timestamp} ({to_datetime_srt_est})
     """
     print("Writing Readme.txt")
     with open(f"{logs_folder_name}/README.txt", 'w') as log_file:
