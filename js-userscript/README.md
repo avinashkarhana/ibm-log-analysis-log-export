@@ -38,3 +38,7 @@ Once Installed, you can use this tool as follows:
     1. Open IBM Log Analysis UI
     2. Select appropriate options/filters/time-frame as usual on UI
     3. Click on `Export Logs` button on top bar (This button might take 5secs to appear after page load)
+
+## Note for users
+
+If asked to allow connection to the API endpoint, click `Allow Always` as this tool needs to connect to API to export logs
