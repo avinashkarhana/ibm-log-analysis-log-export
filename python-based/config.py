@@ -14,7 +14,7 @@ service_id = ""
 from_timestamp = 1697288400
 to_timestamp = 1697293800
 
-# Export format ( PLAIN-TEXT, JSON or CSV)
+# Export format ( PLAIN-TEXT, JSON, CSV or EXCEL)
 export_format = "PLAIN-TEXT"
 
 ############### Usually below data should not be changed  ###############
