@@ -37,7 +37,8 @@ Done !
 Once Installed, you can use this tool as follows:
     1. Open IBM Log Analysis UI
     2. Select appropriate options/filters/time-frame as usual on UI
-    3. Click on `Export Logs` button on top bar (This button might take 5secs to appear after page load)
+    3. Select desired `Log Format` from `Export Format` dropdown
+    4. Click on `Export Logs` button on top bar (This button might take 5secs to appear after page load)
 
 ## Note for users
 

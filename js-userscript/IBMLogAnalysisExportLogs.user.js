@@ -10,6 +10,8 @@
 // @connect      *
 // @grant        GM_xmlhttpRequest
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jszip/3.9.1/jszip.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
+
 // ==/UserScript==
 
 // Later versions of jszip than 3.9.1 are not stable
@@ -22,6 +24,7 @@
     var serviceId = '';
     var fromTimestamp = 0;
     var toTimestamp = 0;
+    var exportFormat = 'PLAIN-TEXT';
     var ibmLogAnalysisRegion = 'us-east';
     var apiPath = '/v2/export';
     var endpoint = '';
@@ -43,7 +46,7 @@
         });
     }
 
-    // Function to get Serive ID from the user
+    // Function to get Service ID from the user
     function getServiceId() {
         // Use prompt to get the service ID from the user and store it in global variable
         serviceId = prompt('Enter your Service ID:');
@@ -86,9 +89,25 @@
         const month = dateParts[0];
         const day = dateParts[1];
         const formattedDate = `${year}-${month}-${day}`;
-        const formattedDateString = `${formattedDate} ${timePart}`;
+        const timeParts = timePart.split(":");
+        let hour = timeParts[0];
+        const minute = timeParts[1];
+        const second = timeParts[2];
+        if (hour === "24") {
+            hour = "00";
+        }
+        const formattedTime = `${hour}:${minute}:${second}`;
+        const formattedDateString = `${formattedDate} ${formattedTime}`;
 
         return formattedDateString;
+    }
+
+    function generateXlsxFileBase64String(data, fileName) {
+        let workSheet = XLSX.utils.json_to_sheet(data);
+        let workBook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workBook, workSheet, fileName);
+        let xlsxFileBase64String = XLSX.writeXLSX(workBook, { type: "base64" });
+        return xlsxFileBase64String;
     }
 
     // Function to Log Export
@@ -199,10 +218,39 @@
                         fileNamePrefix += `_${appName}`;
                     }
 
-                    const logFileName = `${fileNamePrefix}-log.txt`;
-
-                    // Create a Blob to accumulate log data
+                    // Create logData var to accumulate log data
                     let logData = "";
+
+                    let delimiter = " ";
+                    let fileExtension = '.txt';
+                    let isLogDataBase64 = false;
+
+                    // If exportFormat is PLAINT-TEXT
+                    if (exportFormat === 'PLAIN-TEXT') {
+                        delimiter = " ";
+                        fileExtension = '.txt';
+                    }
+
+                    // If exportFormat is CSV
+                    if (exportFormat === 'CSV') {
+                        delimiter = "¶";
+                        fileExtension = '.csv';
+
+                    }
+
+                    // If exportFormat is JSON
+                    if (exportFormat === 'JSON') {
+                        fileExtension = '.json';
+                    }
+
+                    // If exportFormat is EXCEL
+                    if (exportFormat === 'EXCEL') {
+                        fileExtension = '.xlsx';
+                        logData = [];
+                        isLogDataBase64 = true;
+                    }
+
+                    const logFileName = `${fileNamePrefix}-log${fileExtension}`;
 
                     console.log(`> Starting Log Backup in ${logFileName}`);
 
@@ -246,43 +294,135 @@
                             // Extract the "lines" property from the JSON data
                             const lineData = data.lines || [];
 
-                            if (lineData.length > 0) {
-                                // Process and append the log data to the Blob
-                                const textToAppend = lineData.map(item => {
-                                    let line = "";
-                                    if (item._ts) {
-                                        line += timestampStringToEST(`${item._ts}`);
-                                    }
-                                    if (item._host) {
-                                        line += ` ${item._host}`;
-                                    }
-                                    if (item._ip) {
-                                        line += ` ${item._ip}`;
-                                    }
-                                    if (item.pod) {
-                                        line += ` ${item.pod}`;
-                                    }
-                                    if (item._app) {
-                                        line += ` ${item._app}`;
-                                    }
-                                    if (item._line) {
-                                        if (item._logtype === "json") {
-                                            try {
-                                                line += ` ${JSON.parse(item._line).message}`;
-                                            }
-                                            catch {
-                                                line += ` ${item._line}`;
-                                            }
+                            // If exportFormat is PLAINT-TEXT or CSV
+                            if (exportFormat === 'PLAIN-TEXT' || exportFormat === 'CSV') {
+                                if (lineData.length > 0) {
+                                    // Process and append the log data to the Blob
+                                    const textToAppend = lineData.map((item) => {
+                                        let line = "";
+                                        if (item._ts) {
+                                            line += timestampStringToEST(`${item._ts}`);
+                                        }
+
+                                        if (item._host) {
+                                            let line_host = `${item._host}`;
+                                            line += `${delimiter}${line_host}`;
                                         }
                                         else {
-                                            line += ` ${item._line}`;
+                                            line += `${delimiter}`;
                                         }
-                                    }
-                                    return line;
-                                }).join('\n');
 
-                                // Append the text to the logBlob
-                                logData += textToAppend;
+                                        if (item.node) {
+                                            let line_node = `${item.node}`.replace("\n", "");
+                                            line += `${delimiter}${line_node}`;
+                                        }
+                                        else {
+                                            line += `${delimiter}`;
+                                        }
+
+                                        if (item.pod) {
+                                            let line_pod = `${item.pod}`;
+                                            line += `${delimiter}${line_pod}`;
+                                        }
+                                        else {
+                                            line += `${delimiter}`;
+                                        }
+
+                                        if (item._app) {
+                                            let line_app = `${item._app}`;
+                                            line += `${delimiter}${line_app}`;
+                                        }
+                                        else {
+                                            line += `${delimiter}`;
+                                        }
+
+                                        if (item._line) {
+                                            if (item._logtype === "json") {
+                                                try {
+                                                    let line_data = `${JSON.parse(item._line).message}`;
+                                                    line += `${delimiter}${line_data}`;
+                                                }
+                                                catch {
+                                                    let line_data = `${item._line}`;
+                                                    line += `${delimiter}${line_data}`;
+                                                }
+                                            }
+                                            else {
+                                                let line_data = `${item._line}`;
+                                                line += `${delimiter}${line_data}`;
+                                            }
+                                        }
+                                        return line;
+                                    }).join('\n');
+
+                                    // Append the text to the logBlob
+                                    logData += textToAppend;
+                                }
+                            }
+
+                            // If exportFormat is JSON
+                            if (exportFormat === 'JSON') {
+                                if (lineData.length > 0) {
+                                    let textToAppend = JSON.stringify(lineData);
+                                    textToAppend = textToAppend.substring(1, textToAppend.length - 1);
+                                    logData += `${textToAppend}, `;
+                                }
+                            }
+
+                            // If exportFormat is EXCEL
+                            if (exportFormat === 'EXCEL') {
+                                if (lineData.length > 0) {
+                                    for (let i = 0; i < lineData.length; i++) {
+                                        const item = lineData[i];
+                                        let line = {};
+                                        if (item._ts) {
+                                            line['Date-Time'] = timestampStringToEST(`${item._ts}`);
+                                        }
+
+                                        if (item._host) {
+                                            line['Host'] = `${item._host}`;
+                                        }
+                                        else {
+                                            line['Host'] = `Unknown`;
+                                        }
+
+                                        if (item.node) {
+                                            line['Node'] = `${item.node}`;
+                                        }
+                                        else {
+                                            line['Node'] = `Unknown`;
+                                        }
+
+                                        if (item.pod) {
+                                            line['Pod'] = `${item.pod}`;
+                                        }
+                                        else {
+                                            line['Pod'] = `Unknown`;
+                                        }
+
+                                        if (item._app) {
+                                            line['App'] = `${item._app}`;
+                                        }
+                                        else {
+                                            line['App'] = `Unknown`;
+                                        }
+
+                                        if (item._line) {
+                                            if (item._logtype === "json") {
+                                                try {
+                                                    line['Log-Line'] = `${delimiter}${JSON.parse(item._line).message}`;
+                                                }
+                                                catch {
+                                                    line['Log-Line'] = `${delimiter}${item._line}`;
+                                                }
+                                            }
+                                            else {
+                                                line['Log-Line'] = `${delimiter}${item._line}`;
+                                            }
+                                        }
+                                        logData.push(line);
+                                    }
+                                }
                             }
 
                             // Get the paginationId from the response
@@ -290,6 +430,22 @@
 
                             // If there's no more paginationId, exit the loop
                             if (!paginationId) {
+                                // If exportFormat is CSV then add header row
+                                if (exportFormat === 'CSV') {
+                                    logData = `Date-Time${delimiter}Host${delimiter}Node${delimiter}Pod${delimiter}App${delimiter}Log-Line\n` + logData;
+                                }
+
+                                // If exportFormat is JSON then remove extra comma from the end and then add [ at the start and ] at the end
+                                if (exportFormat === 'JSON') {
+                                    logData = logData.substring(0, logData.length - 2);
+                                    logData = `[${logData}]`;
+                                }
+
+                                // If exportFormat is EXCEL then generate XLSX base64 string
+                                if (exportFormat === 'EXCEL') {
+                                    logData = generateXlsxFileBase64String(logData, logFileName);
+                                }
+
                                 break;
                             }
                         } else {
@@ -301,7 +457,7 @@
                     console.log(`# Done taking Log Backup in ${logFileName}`);
 
                     // Add the Blob to the logItemArray
-                    logItemArray.push({ name: logFileName, data: logData });
+                    logItemArray.push({ name: logFileName, data: logData, isBase64: isLogDataBase64 });
                 }
             }
 
@@ -316,9 +472,9 @@
                 readmeTxt += "\n";
             });
 
-            readmeTxt += `\nThese logs are from the following time frame:
-    - From unix timestamp: ${fromTimestamp} (${parsedFromTimestampToESTString})
-    - To unix timestamp: ${toTimestamp} (${parsedToTimestampToESTString})`;
+            readmeTxt += `\nThese logs are from the following time frame:\n`;
+            readmeTxt += `    - From unix timestamp: ${fromTimestamp} (${parsedFromTimestampToESTString})\n`;
+            readmeTxt += `    - To unix timestamp: ${toTimestamp} (${parsedToTimestampToESTString})`;
 
             // Add the readme.txt blob to the logItemArray
             logItemArray.push({ name: 'README.txt', data: readmeTxt });
@@ -328,7 +484,7 @@
 
             for (let i = 0; i < logItemArray.length; i++) {
                 let item = logItemArray[i];
-                zip.file(item.name, item.data);
+                zip.file(item.name, item.data, { base64: item.isBase64 });
             }
 
             console.log(logItemArray);
@@ -355,7 +511,6 @@
                     setTimeout(hideExportLogNotification, 5000);
                 });
             console.log(zipResp);
-
 
         } catch (error) {
             console.error("An error occurred:", error);
@@ -530,6 +685,261 @@
         ibmLogAnalysisRegion = window.location.hostname.split('.')[1];
     }
 
+    // Function to create div drop down menu for selecting export_format
+    function createExportFormatDropDownMenu() {
+        let filterHeaderBar = document.querySelector("#header .control-header .view-name__transition");
+
+        // Create Export Div
+        let exportDiv;
+        if (document.getElementById('export-div')) {
+            exportDiv = document.getElementById('export-div');
+        }
+        else {
+            exportDiv = document.createElement('div');
+        }
+        exportDiv.id = 'export-div';
+        exportDiv.style.display = 'flex';
+        exportDiv.style.alignItems = 'center';
+        exportDiv.style.marginLeft = '1em';
+
+        if (!document.getElementById('export-div')) {
+            // Add Export Div to FilterHeaderBar
+            filterHeaderBar.appendChild(exportDiv);
+        }
+
+        let exportFormatDropDownMenu;
+        if (document.getElementById('export-format-drop-down-menu')) {
+            exportFormatDropDownMenu = document.getElementById('export-format-drop-down-menu');
+        }
+        else {
+            // Create Export Format Drop Down Menu
+            exportFormatDropDownMenu = document.createElement('div');
+        }
+        exportFormatDropDownMenu.id = 'export-format-drop-down-menu';
+        exportFormatDropDownMenu.style.borderRadius = '5px';
+        exportFormatDropDownMenu.style.color = 'white';
+        exportFormatDropDownMenu.style.minWidth = '16em';
+        exportFormatDropDownMenu.style.fontSize = 'medium';
+        exportFormatDropDownMenu.style.background = '#c5c5c947';
+        exportFormatDropDownMenu.style.padding = '0.5em';
+        exportFormatDropDownMenu.style.marginRight = '1em';
+        exportFormatDropDownMenu.style.maxHeight = '3em';
+
+        // Create DropDown Selected Export Format Div
+        let exportFormatDropDownMenuSelectedExportFormatDiv;
+        if (document.getElementById('export-format-drop-down-menu-selected-export-format-div')) {
+            exportFormatDropDownMenuSelectedExportFormatDiv = document.getElementById('export-format-drop-down-menu-selected-export-format-div');
+        }
+        else {
+            exportFormatDropDownMenuSelectedExportFormatDiv = document.createElement('div');
+        }
+        exportFormatDropDownMenuSelectedExportFormatDiv.id = 'export-format-drop-down-menu-selected-export-format-div';
+        exportFormatDropDownMenuSelectedExportFormatDiv.style.display = 'flex';
+        exportFormatDropDownMenuSelectedExportFormatDiv.style.alignItems = 'center';
+        exportFormatDropDownMenuSelectedExportFormatDiv.style.justifyContent = 'center';
+        exportFormatDropDownMenuSelectedExportFormatDiv.addEventListener('click', () => {
+            if (document.getElementById('export-format-drop-down-menu-items-div').style.display == 'none') {
+                document.getElementById('export-format-drop-down-menu-items-div').style.display = 'flex';
+            }
+            else {
+                document.getElementById('export-format-drop-down-menu-items-div').style.display = 'none';
+            }
+        });
+
+        // Create Image Icon for Export Format Drop Down Menu
+        let exportFormatDropDownMenuIcon;
+        if (document.getElementById('export-format-drop-down-menu-icon')) {
+            exportFormatDropDownMenuIcon = document.getElementById('export-format-drop-down-menu-icon');
+        }
+        else {
+            exportFormatDropDownMenuIcon = document.createElement('img');
+        }
+        exportFormatDropDownMenuIcon.id = 'export-format-drop-down-menu-icon';
+        exportFormatDropDownMenuIcon.style.height = '2em';
+        exportFormatDropDownMenuIcon.style.cursor = 'pointer';
+        exportFormatDropDownMenuIcon.setAttribute('src', 'data:image/png;base64,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');
+
+        // Add Image Icon to Export Format Drop Down Menu
+        if (!document.getElementById('export-format-drop-down-menu-icon')) {
+            exportFormatDropDownMenuSelectedExportFormatDiv.appendChild(exportFormatDropDownMenuIcon);
+        }
+
+        // Create a div for text
+        let exportFormatDropDownMenuTextDiv;
+        if (document.getElementById('export-format-drop-down-menu-text-div')) {
+            exportFormatDropDownMenuTextDiv = document.getElementById('export-format-drop-down-menu-text-div');
+        }
+        else {
+            exportFormatDropDownMenuTextDiv = document.createElement('div');
+        }
+        exportFormatDropDownMenuTextDiv.id = 'export-format-drop-down-menu-text-div';
+        exportFormatDropDownMenuTextDiv.style.display = "inline-block";
+        exportFormatDropDownMenuTextDiv.style.marginLeft = "0.5em";
+        exportFormatDropDownMenuTextDiv.style.cursor = "pointer";
+        exportFormatDropDownMenuTextDiv.innerText = 'Export Format: ' + exportFormat;
+
+        // Add Export Format Drop Down Menu Text Div to Export Format Drop Down Menu
+        if (!document.getElementById('export-format-drop-down-menu-text-div')) {
+            exportFormatDropDownMenuSelectedExportFormatDiv.appendChild(exportFormatDropDownMenuTextDiv);
+        }
+
+        // Create Export Format Drop Down Menu Items Div
+        let exportFormatDropDownMenuItemsDiv;
+        if (document.getElementById('export-format-drop-down-menu-items-div')) {
+            exportFormatDropDownMenuItemsDiv = document.getElementById('export-format-drop-down-menu-items-div');
+        }
+        else {
+            exportFormatDropDownMenuItemsDiv = document.createElement('div');
+        }
+        exportFormatDropDownMenuItemsDiv.id = 'export-format-drop-down-menu-items-div';
+        exportFormatDropDownMenuItemsDiv.style.borderTopStyle = "solid"
+        exportFormatDropDownMenuItemsDiv.style.display = 'flex';
+        exportFormatDropDownMenuItemsDiv.style.flexDirection = 'column';
+        exportFormatDropDownMenuItemsDiv.style.alignItems = 'center';
+        exportFormatDropDownMenuItemsDiv.style.justifyContent = 'center';
+        exportFormatDropDownMenuItemsDiv.style.padding = '0.5em';
+        exportFormatDropDownMenuItemsDiv.style.cursor = 'pointer';
+        exportFormatDropDownMenuItemsDiv.style.backgroundColor = 'grey';
+        exportFormatDropDownMenuItemsDiv.style.marginTop = '0.3em';
+        exportFormatDropDownMenuItemsDiv.style.display = 'none';
+
+        // Create Export Format Drop Down Menu Item : CSV
+        let csvExportFormat;
+        if (document.getElementById('csv-export-format')) {
+            csvExportFormat = document.getElementById('csv-export-format');
+        }
+        else {
+            csvExportFormat = document.createElement('div');
+        }
+        csvExportFormat.id = 'csv-export-format';
+        csvExportFormat.style.width = '100%';
+        csvExportFormat.style.textAlign = 'center';
+        csvExportFormat.style.padding = '0.5em';
+        csvExportFormat.style.cursor = 'pointer';
+        csvExportFormat.innerText = 'CSV';
+        csvExportFormat.addEventListener('click', () => {
+            exportFormat = 'CSV';
+            document.getElementById('export-format-drop-down-menu-text-div').innerText = 'Export Format: ' + exportFormat;
+            document.getElementById('export-format-drop-down-menu-items-div').style.display = 'none';
+        });
+        csvExportFormat.addEventListener('mouseover', () => {
+            csvExportFormat.style.backgroundColor = '#ffffff24';
+        });
+        csvExportFormat.addEventListener('mouseout', () => {
+            csvExportFormat.style.backgroundColor = '';
+        });
+
+        // Create Export Format Drop Down Menu Item : JSON
+        let jsonExportFormat;
+        if (document.getElementById('json-export-format')) {
+            jsonExportFormat = document.getElementById('json-export-format');
+        }
+        else {
+            jsonExportFormat = document.createElement('div');
+        }
+        jsonExportFormat.id = 'json-export-format';
+        jsonExportFormat.style.width = '100%';
+        jsonExportFormat.style.textAlign = 'center';
+        jsonExportFormat.style.borderTopStyle = 'groove';
+        jsonExportFormat.style.padding = '0.5em';
+        jsonExportFormat.style.cursor = 'pointer';
+        jsonExportFormat.innerText = 'JSON';
+        jsonExportFormat.addEventListener('click', () => {
+            exportFormat = 'JSON';
+            document.getElementById('export-format-drop-down-menu-text-div').innerText = 'Export Format: ' + exportFormat;
+            document.getElementById('export-format-drop-down-menu-items-div').style.display = 'none';
+        });
+        jsonExportFormat.addEventListener('mouseover', () => {
+            jsonExportFormat.style.background = '#ffffff24';
+        });
+        jsonExportFormat.addEventListener('mouseout', () => {
+            jsonExportFormat.style.background = '';
+        });
+
+        // Create Export Format Drop Down Menu Item : PLAIN-TEXT
+        let plainTextExportFormat;
+        if (document.getElementById('plain-text-export-format')) {
+            plainTextExportFormat = document.getElementById('plain-text-export-format');
+        }
+        else {
+            plainTextExportFormat = document.createElement('div');
+        }
+        plainTextExportFormat.id = 'plain-text-export-format';
+        plainTextExportFormat.style.width = '100%';
+        plainTextExportFormat.style.textAlign = 'center';
+        plainTextExportFormat.style.borderTopStyle = 'groove';
+        plainTextExportFormat.style.padding = '0.5em';
+        plainTextExportFormat.style.cursor = 'pointer';
+        plainTextExportFormat.innerText = 'PLAIN-TEXT';
+        plainTextExportFormat.addEventListener('click', () => {
+            exportFormat = 'PLAIN-TEXT';
+            document.getElementById('export-format-drop-down-menu-text-div').innerText = 'Export Format: ' + exportFormat;
+            document.getElementById('export-format-drop-down-menu-items-div').style.display = 'none';
+        });
+        plainTextExportFormat.addEventListener('mouseover', () => {
+            plainTextExportFormat.style.background = '#ffffff24';
+        });
+        plainTextExportFormat.addEventListener('mouseout', () => {
+            plainTextExportFormat.style.background = '';
+        });
+
+        // Create Export Format Drop Down Menu Item : EXCEL
+        let excelExportFormat;
+        if (document.getElementById('excel-export-format')) {
+            excelExportFormat = document.getElementById('excel-export-format');
+        }
+        else {
+            excelExportFormat = document.createElement('div');
+        }
+        excelExportFormat.id = 'excel-export-format';
+        excelExportFormat.style.width = '100%';
+        excelExportFormat.style.textAlign = 'center';
+        excelExportFormat.style.borderTopStyle = 'groove';
+        excelExportFormat.style.padding = '0.5em';
+        excelExportFormat.style.cursor = 'pointer';
+        excelExportFormat.innerText = 'EXCEL';
+        excelExportFormat.addEventListener('click', () => {
+            exportFormat = 'EXCEL';
+            document.getElementById('export-format-drop-down-menu-text-div').innerText = 'Export Format: ' + exportFormat;
+            document.getElementById('export-format-drop-down-menu-items-div').style.display = 'none';
+        });
+        excelExportFormat.addEventListener('mouseover', () => {
+            excelExportFormat.style.background = '#ffffff24';
+        });
+        excelExportFormat.addEventListener('mouseout', () => {
+            excelExportFormat.style.background = '';
+        });
+
+        // Add Export Format Drop Down Menu Items to Export Format Drop Down Menu Items Div
+        if (!document.getElementById('csv-export-format')) {
+            exportFormatDropDownMenuItemsDiv.appendChild(csvExportFormat);
+        }
+        if (!document.getElementById('json-export-format')) {
+            exportFormatDropDownMenuItemsDiv.appendChild(jsonExportFormat);
+        }
+        if (!document.getElementById('plain-text-export-format')) {
+            exportFormatDropDownMenuItemsDiv.appendChild(plainTextExportFormat);
+        }
+        if (!document.getElementById('excel-export-format')) {
+            exportFormatDropDownMenuItemsDiv.appendChild(excelExportFormat);
+        }
+
+        if (!document.getElementById('export-format-drop-down-menu-selected-export-format-div')) {
+            // Add Export Format Drop Down Menu Selected Export Format Div to Export Format Drop Down Menu
+            exportFormatDropDownMenu.appendChild(exportFormatDropDownMenuSelectedExportFormatDiv);
+        }
+
+        if (!document.getElementById('export-format-drop-down-menu-items-div')) {
+            // Add Export Format Drop Down Menu Items Div to Export Format Drop Down Menu
+            exportFormatDropDownMenu.appendChild(exportFormatDropDownMenuItemsDiv);
+        }
+
+        if (!document.getElementById('export-format-drop-down-menu')) {
+            // Add Export Format Drop Down Menu to Export Div
+            exportDiv.appendChild(exportFormatDropDownMenu);
+        }
+    }
+
     // Function to get selected hosts
     async function getSelectedHosts() {
         var hostFilterMenu = document.getElementById('filter-menu-hosts');
@@ -588,8 +998,28 @@
     function addLogExportButton() {
         let filterHeaderBar = document.querySelector("#header .control-header .view-name__transition");
 
+        // Create Export Div
+        let exportDiv;
+        if (document.getElementById('export-div')) {
+            exportDiv = document.getElementById('export-div');
+        }
+        else {
+            exportDiv = document.createElement('div');
+        }
+        exportDiv.id = 'export-div';
+        exportDiv.style.display = 'flex';
+        exportDiv.style.alignItems = 'center';
+        exportDiv.style.marginLeft = '1em';
+
+
         // Create Export Log Button
-        let exportLogButton = document.createElement('button');
+        let exportLogButton;
+        if (document.getElementById('export-log-button')) {
+            exportLogButton = document.getElementById('export-log-button');
+        }
+        else {
+            exportLogButton = document.createElement('button');
+        }
         exportLogButton.id = 'export-log-button';
         exportLogButton.style.color = 'white';
         exportLogButton.style.padding = '0.7em';
@@ -598,8 +1028,15 @@
         exportLogButton.style.fontFamily = 'Source Sans Pro';
         exportLogButton.innerText = 'Export Logs';
 
-        // Add Export Log Button to FilterHeaderBar
-        filterHeaderBar.appendChild(exportLogButton);
+        if (!document.getElementById('export-log-button')) {
+            // Add Export Log Button to Export Div
+            exportDiv.appendChild(exportLogButton);
+        }
+
+        if (!document.getElementById('export-div')) {
+            // Add Export Div to FilterHeaderBar
+            filterHeaderBar.appendChild(exportDiv);
+        }
 
         // Add Event Listener to Export Log Button
         exportLogButton.addEventListener('click', async () => {
@@ -609,19 +1046,28 @@
     }
 
     setTimeout(() => {
-            // Add Export Log Button
-            addLogExportButton();
+        // Create Export Format Drop Down Menu
+        createExportFormatDropDownMenu();
 
-            // Create Export Log Notification
-            createExportLogNotification();
+        // Add Export Log Button
+        addLogExportButton();
+
+        // Create Export Log Notification
+        createExportLogNotification();
+
     }, 5000);
     setInterval(() => {
-            if (!document.querySelector("#export-log-button")) {
-                // Add Export Log Button
-                addLogExportButton();
-
+        if (!document.querySelector("#export-format-drop-down-menu")) {
+            // Create Export Format Drop Down Menu
+            createExportFormatDropDownMenu();
+        }
+        if (!document.querySelector("#export-log-button")) {
+            // Add Export Log Button
+            addLogExportButton();
+        }
+        if (!document.querySelector("#log-export-notification-icon")) {
             // Create Export Log Notification
             createExportLogNotification();
-            }
+        }
     }, 5000);
 })();

@@ -10,6 +10,8 @@ This project contains two tools to export logs from IBM Log Analysis.
 
 Both tools have their own pros and cons, and it is recommended to use the tool which suits your needs.
 
+> > Both the tools supports exporting logs in multiple formats Plain-Text, JSON, CSV, and EXCEL(XLSX).
+
 ### Python based tool
 
 - It is more reliable than the JavaScript based tool as it do not rely on UI for configuration.
