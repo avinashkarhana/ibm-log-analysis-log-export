@@ -103,6 +103,10 @@
     }
 
     function generateXlsxFileBase64String(data, fileName) {
+        // Sheet Name is limited to 31 characters
+        if (fileName.length > 31) {
+            fileName = fileName.substring(0, 30);
+        }
         let workSheet = XLSX.utils.json_to_sheet(data);
         let workBook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workBook, workSheet, fileName);
