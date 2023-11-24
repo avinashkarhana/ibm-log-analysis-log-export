@@ -38,7 +38,23 @@ Both tools have their own pros and cons, and it is recommended to use the tool w
 
 > Verdict: Recommended for most users due to ease of use and no manual editing of files, and almost no pre-setup required apart from tamper-monkey extension.
 
-### Wanna help me to work more on Open-Source Projects like this?
+## Process to get the Service_ID/Key
+
+An Admin user can get the Service_ID/Key from the IBM Log Analysis UI.
+
+To get the Service_ID/Key, follow the below steps:
+
+1. Login to IBM Log Analysis UI.
+2. Go to `Settings` by clicking on the gear icon on left panel.
+3. Expand the `Organization` section.
+4. Click on `API Keys`.
+5. Use `Analysis Service Keys` section, to get existing service keys or generate new service keys.
+
+<img src="IBM_Log_Analysis_Service_Key_Process.png" alt="IBM Log Analysis Service Key Process" />
+
+> Keep a note of the Service_ID/Key somewhere safe as you will need this to export logs using the tools
+
+## Do you Want to help me to work more on Open-Source Projects like this?
 <a href="https://www.buymeacoffee.com/avinashkarhana" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a> so that I can get one more sleepless night to work on this kind of stuff.
 
 Or use other sponsoring methods if you like.
