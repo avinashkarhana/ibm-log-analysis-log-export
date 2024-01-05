@@ -24,19 +24,21 @@ Both tools have their own pros and cons, and it is recommended to use the tool w
 
 - It is more easy to use as it is embedded in the browser and can be used just as an extension to the IBM Log Analysis UI.
 
-- This tools also do not require any manual editing of files.
+- This tool also does not require any manual editing of files.
 
-- This tool does not store any sensitive information on disk, and asks for Service_ID/Key on every reload of the page.
+- This tool does not store any sensitive information on disk and asks for Service_ID/Key on every reload of the page.
 
-- Log Export works with a single button click, after selecting appropriate options/filters/time-frame, as usual on UI.
+- Log Export works with a single button click after selecting appropriate options/filters/time-frame, as usual on UI.
 
 - Easy to install (Few clicks install) and use.
+
+- It might take longer to collect longs for a very long time frame as the native browser-based zipping takes time
 
 - But it is less reliable than the Python based tool as it relies on the UI elements of IBM Log Analysis (Which might change in future).
 
 - This tool also requires the user to install a browser extension (TamperMonkey) to work.
 
-> Verdict: Recommended for most users due to ease of use and no manual editing of files, and almost no pre-setup required apart from tamper-monkey extension.
+> Verdict: Recommended for most users due to ease of use and no manual editing of files, and almost no pre-setup required apart from the tamper-monkey extension.
 
 ## Process to get the Service_ID/Key
 
