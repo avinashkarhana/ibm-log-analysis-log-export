@@ -10,7 +10,7 @@ hosts = []
 # Service Key (API) for the IBM Log Analysis Instance
 service_id = ""
 
-# Log Export time Frame (Unix Timestamp - NUMERIC)
+# Log Export time Frame (Unix Timestamp - NUMERIC) Use a website like https://www.timestamp-converter.com/ to get this
 from_timestamp = 1697288400
 to_timestamp = 1697293800
 
